@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}結帳 - 餐飲點餐系統{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <h1 class="mb-4">確認訂單</h1>
+        <form id="checkout-form">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">聯絡資訊</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="customer-name" class="form-label">姓名 *</label>
+                        <input type="text" class="form-control" id="customer-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-phone" class="form-label">電話</label>
+                        <input type="tel" class="form-control" id="customer-phone">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">訂單明細</h5>
+            </div>
+            <div class="card-body">
+                {% for item in cart %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>{{ item.name }}</strong>
+                        <br><small class="text-muted">數量: {{ item.quantity }}</small>
+                    </div>
+                    <span>NT$ {{ (item.price * item.quantity)|int }}</span>
+                </div>
+                {% endfor %}
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>總計：</strong>
+                    <strong class="text-primary">NT$ {{ total|int }}</strong>
+                </div>
+                <button type="submit" form="checkout-form" class="btn btn-primary w-100 mt-3">
+                    <i class="fas fa-credit-card me-1"></i>確認下單
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('checkout-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const customerName = document.getElementById('customer-name').value;
+    const customerPhone = document.getElementById('customer-phone').value;
+    
+    if (!customerName.trim()) {
+        alert('請輸入姓名');
+        return;
+    }
+    
+    fetch('/api/submit_order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            customer_name: customerName,
+            customer_phone: customerPhone
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = `/payment/${data.order_id}`;
+        } else {
+            alert('下單失敗：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('發生錯誤，請稍後再試');
+    });
+});
+</script>
+{% endblock %}

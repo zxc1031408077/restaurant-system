@@ -1,0 +1,209 @@
+{% extends "admin_base.html" %}
+
+{% block title %}訂單管理 - 商家管理後台{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>訂單管理</h1>
+        <p class="text-muted">管理所有訂單狀態</p>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary active" data-filter="all">全部</button>
+            <button type="button" class="btn btn-outline-warning" data-filter="待處理">待處理</button>
+            <button type="button" class="btn btn-outline-info" data-filter="製作中">製作中</button>
+            <button type="button" class="btn btn-outline-success" data-filter="完成">完成</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>訂單編號</th>
+                        <th>顧客姓名</th>
+                        <th>聯絡電話</th>
+                        <th>總金額</th>
+                        <th>下單時間</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-table">
+                    {% for order in orders %}
+                    <tr data-status="{{ order.status }}">
+                        <td>#{{ order.id }}</td>
+                        <td>{{ order.customer_name }}</td>
+                        <td>{{ order.customer_phone or '-' }}</td>
+                        <td>NT$ {{ order.total_price|int }}</td>
+                        <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if order.status == '待處理' %}
+                                <span class="badge bg-warning">{{ order.status }}</span>
+                            {% elif order.status == '製作中' %}
+                                <span class="badge bg-info">{{ order.status }}</span>
+                            {% elif order.status == '完成' %}
+                                <span class="badge bg-success">{{ order.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary detail-btn" 
+                                    data-id="{{ order.id }}"
+                                    data-items="{{ order.order_items|e }}">
+                                詳情
+                            </button>
+                            {% if order.status != '完成' %}
+                            <div class="btn-group btn-group-sm">
+                                {% if order.status == '待處理' %}
+                                <button class="btn btn-outline-info status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="製作中">
+                                    製作中
+                                </button>
+                                <button class="btn btn-outline-success status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="完成">
+                                    完成
+                                </button>
+                                {% elif order.status == '製作中' %}
+                                <button class="btn btn-outline-success status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="完成">
+                                    完成
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 訂單詳情模態框 -->
+<div class="modal fade" id="orderDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">訂單詳情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderDetailContent">
+                <!-- 詳情內容將通過 JavaScript 填充 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 狀態篩選
+document.querySelectorAll('[data-filter]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // 更新按鈕狀態
+        document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const filter = this.dataset.filter;
+        const rows = document.querySelectorAll('#orders-table tr');
+        
+        rows.forEach(row => {
+            if (filter === 'all' || row.dataset.status === filter) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+
+// 查看詳情
+document.querySelectorAll('.detail-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const orderId = this.dataset.id;
+        const orderItems = JSON.parse(this.dataset.items);
+        
+        let content = `
+            <h6>訂單 #${orderId} 明細</h6>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>品項</th>
+                        <th>單價</th>
+                        <th>數量</th>
+                        <th>小計</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        let total = 0;
+        orderItems.forEach(item => {
+            const subtotal = item.price * item.quantity;
+            total += subtotal;
+            content += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>NT$ ${item.price}</td>
+                    <td>${item.quantity}</td>
+                    <td>NT$ ${subtotal}</td>
+                </tr>
+            `;
+        });
+        
+        content += `
+                </tbody>
+                <tfoot>
+                    <tr class="table-primary">
+                        <th colspan="3">總計</th>
+                        <th>NT$ ${total}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        
+        document.getElementById('orderDetailContent').innerHTML = content;
+        new bootstrap.Modal(document.getElementById('orderDetailModal')).show();
+    });
+});
+
+// 更新狀態
+document.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const orderId = this.dataset.id;
+        const newStatus = this.dataset.status;
+        
+        if (confirm(`確定要將訂單狀態改為「${newStatus}」嗎？`)) {
+            fetch(`/api/admin/update_order_status/${orderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('狀態更新成功！');
+                    location.reload();
+                } else {
+                    alert('更新失敗：' + data.message);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

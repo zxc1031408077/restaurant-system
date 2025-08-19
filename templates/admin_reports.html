@@ -1,0 +1,88 @@
+{% extends "admin_base.html" %}
+
+{% block title %}銷售報表 - 商家管理後台{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>銷售報表</h1>
+        <p class="text-muted">查看營收統計和銷售趨勢</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">今日統計</h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="text-primary">{{ today_orders }}</h2>
+                <p>筆訂單</p>
+                <h3 class="text-success">NT$ {{ today_revenue|int }}</h3>
+                <p class="text-muted">營收</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">本月統計</h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="text-primary">{{ month_orders }}</h2>
+                <p>筆訂單</p>
+                <h3 class="text-success">NT$ {{ month_revenue|int }}</h3>
+                <p class="text-muted">營收</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">最近7天銷售趨勢</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>訂單數</th>
+                                <th>營收</th>
+                                <th>趨勢</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day in week_data %}
+                            <tr>
+                                <td>{{ day.date }}</td>
+                                <td>{{ day.orders }}</td>
+                                <td>NT$ {{ day.revenue|int }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ (day.revenue / (week_data|map(attribute='revenue')|max or 1) * 100)|int }}%">
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 可以在這裡加入圖表庫如 Chart.js 來顯示更豐富的圖表
+console.log('銷售報表頁面載入完成');
+</script>
+{% endblock %}

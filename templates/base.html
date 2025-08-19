@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}餐飲點餐系統{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand { font-weight: bold; }
+        .card-img-top { height: 200px; object-fit: cover; }
+        .btn-primary { background-color: #ff6b35; border-color: #ff6b35; }
+        .btn-primary:hover { background-color: #e55a2b; border-color: #e55a2b; }
+        .cart-badge { background-color: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.8em; }
+        footer { background-color: #343a40; color: white; padding: 20px 0; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('menu') }}">
+                <i class="fas fa-utensils me-2"></i>美食點餐
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('menu') }}">
+                    <i class="fas fa-home me-1"></i>菜單
+                </a>
+                <a class="nav-link" href="{{ url_for('cart') }}">
+                    <i class="fas fa-shopping-cart me-1"></i>購物車
+                    <span id="cart-count" class="cart-badge d-none">0</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container my-4">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="text-center">
+        <div class="container">
+            <p>&copy; 2024 餐飲點餐系統. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 更新購物車計數
+        function updateCartCount() {
+            fetch('/api/get_cart')
+                .then(response => response.json())
+                .then(data => {
+                    const count = data.cart.reduce((sum, item) => sum + item.quantity, 0);
+                    const badge = document.getElementById('cart-count');
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.classList.remove('d-none');
+                    } else {
+                        badge.classList.add('d-none');
+                    }
+                });
+        }
+        
+        // 頁面載入時更新購物車計數
+        document.addEventListener('DOMContentLoaded', updateCartCount);
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

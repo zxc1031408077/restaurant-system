@@ -1,0 +1,120 @@
+{% extends "admin_base.html" %}
+
+{% block title %}總覽 - 商家管理後台{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>營運總覽</h1>
+        <p class="text-muted">歡迎使用商家管理系統</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_orders }}</h4>
+                        <p class="mb-0">總訂單數</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-shopping-cart fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ pending_orders }}</h4>
+                        <p class="mb-0">待處理訂單</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ today_orders }}</h4>
+                        <p class="mb-0">今日訂單</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calendar-day fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>NT$ {{ today_revenue|int }}</h4>
+                        <p class="mb-0">今日營收</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-dollar-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">快速操作</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-shopping-cart me-2"></i>查看待處理訂單
+                    </a>
+                    <a href="{{ url_for('admin_products') }}" class="btn btn-outline-success">
+                        <i class="fas fa-plus me-2"></i>新增商品
+                    </a>
+                    <a href="{{ url_for('admin_reports') }}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-bar me-2"></i>查看銷售報表
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">系統資訊</h5>
+            </div>
+            <div class="card-body">
+                <p><i class="fas fa-server me-2"></i>系統運行正常</p>
+                <p><i class="fas fa-database me-2"></i>資料庫連接正常</p>
+                <p><i class="fas fa-clock me-2"></i>最後更新：<span id="current-time"></span></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateTime() {
+    document.getElementById('current-time').textContent = new Date().toLocaleString('zh-TW');
+}
+updateTime();
+setInterval(updateTime, 1000);
+</script>
+{% endblock %}

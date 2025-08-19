@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}訂單成功 - 餐飲點餐系統{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="text-center mb-5">
+            <div class="text-success mb-3">
+                <i class="fas fa-check-circle fa-5x"></i>
+            </div>
+            <h1 class="text-success">訂單成功！</h1>
+            <p class="lead">感謝您的訂購，我們正在為您準備美味的餐點</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">訂單詳情</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>訂單編號：</strong></div>
+                    <div class="col-sm-9">#{{ order.id }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>顧客姓名：</strong></div>
+                    <div class="col-sm-9">{{ order.customer_name }}</div>
+                </div>
+                {% if order.customer_phone %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>聯絡電話：</strong></div>
+                    <div class="col-sm-9">{{ order.customer_phone }}</div>
+                </div>
+                {% endif %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>下單時間：</strong></div>
+                    <div class="col-sm-9">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>訂單狀態：</strong></div>
+                    <div class="col-sm-9">
+                        <span class="badge bg-warning">{{ order.status }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-3"><strong>總金額：</strong></div>
+                    <div class="col-sm-9 text-primary fs-5">NT$ {{ order.total_price|int }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{{ url_for('order_status', order_id=order.id) }}" class="btn btn-primary me-3">
+                <i class="fas fa-search me-1"></i>查看訂單狀態
+            </a>
+            <a href="{{ url_for('menu') }}" class="btn btn-outline-primary">
+                <i class="fas fa-home me-1"></i>返回菜單
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
