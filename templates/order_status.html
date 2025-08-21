@@ -20,7 +20,7 @@
                         {% if order.customer_phone %}
                         <p><strong>電話：</strong>{{ order.customer_phone }}</p>
                         {% endif %}
-                        <p><strong>下單時間：</strong>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p><strong>下單時間：</strong>{{ order.created_at|localtime }}</p>
                         <p><strong>總金額：</strong><span class="text-primary">NT$ {{ order.total_price|int }}</span></p>
                     </div>
                     <div class="col-md-6">
