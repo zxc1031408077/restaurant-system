@@ -43,7 +43,7 @@
                         <td>{{ order.customer_name }}</td>
                         <td>{{ order.customer_phone or '-' }}</td>
                         <td>NT$ {{ order.total_price|int }}</td>
-                        <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ order.created_at|localtime }}</td>
                         <td>
                             {% if order.status == '待處理' %}
                                 <span class="badge bg-warning">{{ order.status }}</span>
