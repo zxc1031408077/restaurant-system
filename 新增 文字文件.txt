@@ -1,0 +1,35 @@
+初始化 Git 倉庫：
+
+git init
+
+
+添加遠端：
+
+git remote add origin https://github.com/zxc1031408077/restaurant-system.git
+
+
+添加所有檔案：
+
+git add .
+
+
+提交：
+
+git commit -m "本地資料強制同步到 GitHub"
+
+
+強制推送到遠端 main（覆蓋遠端）：
+
+git push origin main --force
+
+
+
+把本地 master 改名為 main，然後 push
+# 將本地 master 改名為 main
+git branch -m master main
+
+# 設定 upstream
+git push -u origin main --force
+
+
+這樣就會把本地 main 強制推到遠端 main，遠端就會與本地完全一致。
