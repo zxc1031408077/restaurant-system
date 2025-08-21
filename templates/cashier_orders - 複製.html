@@ -1,0 +1,290 @@
+<!-- cashier_orders.html -->
+{% extends "cashier_base.html" %}
+
+{% block title %}訂單管理 - 收銀員系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>訂單管理</h1>
+        <p class="text-muted">管理所有訂單狀態</p>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary active" data-filter="all">全部</button>
+            <button type="button" class="btn btn-outline-warning" data-filter="待處理">待處理</button>
+            <button type="button" class="btn btn-outline-info" data-filter="製作中">製作中</button>
+            <button type="button" class="btn btn-outline-success" data-filter="完成">完成</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>訂單編號</th>
+                        <th>顧客姓名</th>
+                        <th>聯絡電話</th>
+                        <th>總金額</th>
+                        <th>下單時間</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-table">
+                    {% for order in orders %}
+                    <tr data-status="{{ order.status }}">
+                        <td>#{{ order.id }}</td>
+                        <td>{{ order.customer_name }}</td>
+                        <td>{{ order.customer_phone or '-' }}</td>
+                        <td>NT$ {{ order.total_price|int }}</td>
+                        <td>{{ order.created_at|localtime }}</td>
+                        <td>
+                            {% if order.status == '待處理' %}
+                                <span class="badge bg-warning">{{ order.status }}</span>
+                            {% elif order.status == '製作中' %}
+                                <span class="badge bg-info">{{ order.status }}</span>
+                            {% elif order.status == '完成' %}
+                                <span class="badge bg-success">{{ order.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary detail-btn" 
+                                    data-id="{{ order.id }}"
+                                    data-name="{{ order.customer_name }}"
+                                    data-phone="{{ order.customer_phone or '' }}"
+                                    data-items="{{ order.order_items|e }}"
+                                    data-total="{{ order.total_price }}">
+                                詳情
+                            </button>
+                            {% if order.status != '完成' %}
+                            <div class="btn-group btn-group-sm">
+                                {% if order.status == '待處理' %}
+                                <button class="btn btn-outline-info status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="製作中">
+                                    製作中
+                                </button>
+                                <button class="btn btn-outline-success status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="完成">
+                                    完成
+                                </button>
+                                {% elif order.status == '製作中' %}
+                                <button class="btn btn-outline-success status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="完成">
+                                    完成
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 訂單詳情模態框 -->
+<div class="modal fade" id="orderDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">訂單詳情 - 編號 #<span id="detail-order-id"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>顧客姓名：</strong><span id="detail-customer-name"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>聯絡電話：</strong><span id="detail-customer-phone"></span></p>
+                    </div>
+                </div>
+
+                <h6>訂單項目</h6>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>品項</th>
+                            <th>單價</th>
+                            <th>數量</th>
+                            <th>小計</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-items-table">
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-primary">
+                            <th colspan="3">總計</th>
+                            <th id="order-total-view">NT$ 0</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新訂單通知模態框 -->
+<div class="modal fade" id="newOrderModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-bell me-2"></i>新訂單通知</h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    有新的訂單需要處理，將在 <span id="countdown">10</span> 秒後自動關閉
+                </div>
+                
+                <div id="new-order-content">
+                    <!-- 新訂單內容將通過JavaScript動態填充 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">立即處理</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 播放鈴聲 -->
+<audio id="notification-sound" src="/static/notification.mp3" preload="auto"></audio>
+
+<script>
+// 全域變數
+let newOrderModal = null;
+let countdownInterval = null;
+
+// 倒數計時
+function startCountdown(seconds) {
+    let countdown = seconds;
+    const countdownElement = document.getElementById('countdown');
+    countdownElement.textContent = countdown;
+
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+
+    countdownInterval = setInterval(() => {
+        countdown--;
+        countdownElement.textContent = countdown;
+
+        if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            newOrderModal.hide();
+
+            // ✅ 倒數結束後再刷新頁面
+            location.reload();
+        }
+    }, 1000);
+}
+
+// 顯示新訂單通知
+function showNewOrderNotification(orderData) {
+    // 播放鈴聲
+    const sound = document.getElementById('notification-sound');
+    sound.currentTime = 0;
+    sound.play().catch(e => console.log('無法播放音效:', e));
+
+    // 填充訂單內容
+    const contentDiv = document.getElementById('new-order-content');
+    contentDiv.innerHTML = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>訂單編號：</strong>#${orderData.id}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>下單時間：</strong>${new Date().toLocaleString('zh-TW')}</p>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>顧客姓名：</strong>${orderData.customer_name}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>聯絡電話：</strong>${orderData.customer_phone || '-'}</p>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>用餐方式：</strong>${orderData.dine_in ? '內用' : '外帶'}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>總金額：</strong>NT$ ${orderData.total_price}</p>
+            </div>
+        </div>
+        
+        <h6>訂單項目</h6>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>品項</th>
+                    <th>單價</th>
+                    <th>數量</th>
+                    <th>小計</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${orderData.order_items.map(item => `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>NT$ ${item.price}</td>
+                        <td>${item.quantity}</td>
+                        <td>NT$ ${item.price * item.quantity}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+            <tfoot>
+                <tr class="table-primary">
+                    <th colspan="3">總計</th>
+                    <th>NT$ ${orderData.total_price}</th>
+                </tr>
+            </tfoot>
+        </table>
+    `;
+
+    // 顯示 modal
+    if (!newOrderModal) {
+        newOrderModal = new bootstrap.Modal(document.getElementById('newOrderModal'));
+    }
+    newOrderModal.show();
+
+    // 啟動倒數
+    startCountdown(10);
+}
+
+// WebSocket 或輪詢檢查新訂單
+function checkNewOrders() {
+    fetch('/api/check_new_orders')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.has_new_order) {
+                showNewOrderNotification(data.order);
+            }
+        })
+        .catch(error => console.error('檢查新訂單時發生錯誤:', error));
+}
+
+// 每10秒檢查一次新訂單
+setInterval(checkNewOrders, 10000);
+
+// 頁面載入時檢查一次
+checkNewOrders();
+</script>
+{% endblock %}

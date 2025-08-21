@@ -1,0 +1,52 @@
+<!-- admin_cashier_performance.html -->
+{% extends "admin_base.html" %}
+
+{% block title %}收銀員績效 - 商家管理後台{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>收銀員績效</h1>
+        <p class="text-muted">查看收銀員的工作表現</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>收銀員</th>
+                        <th>狀態</th>
+                        <th>總訂單數</th>
+                        <th>總收入</th>
+                        <th>最近30天訂單</th>
+                        <th>最近30天收入</th>
+                        <th>創建時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cashier in cashier_performance %}
+                    <tr>
+                        <td>{{ cashier.username }}</td>
+                        <td>
+                            {% if cashier.is_active %}
+                                <span class="badge bg-success">啟用</span>
+                            {% else %}
+                                <span class="badge bg-danger">停用</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ cashier.order_count }}</td>
+                        <td>NT$ {{ cashier.total_revenue|int }}</td>
+                        <td>{{ cashier.recent_order_count }}</td>
+                        <td>NT$ {{ cashier.recent_revenue|int }}</td>
+                        <td>{{ cashier.created_at|localtime }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

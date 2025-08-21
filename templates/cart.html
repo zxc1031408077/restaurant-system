@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}購物車 - 餐飲點餐系統{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <h1 class="mb-4">購物車</h1>
+        <div id="cart-items"></div>
+        <div id="empty-cart" class="text-center py-5 d-none">
+            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">購物車是空的</h4>
+            <p class="text-muted">快去選購您喜愛的美食吧！</p>
+            <a href="{{ url_for('menu') }}" class="btn btn-primary">瀏覽菜單</a>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">訂單摘要</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <span>小計：</span>
+                    <span id="cart-total">NT$ 0</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-3">
+                    <strong>總計：</strong>
+                    <strong id="final-total">NT$ 0</strong>
+                </div>
+                <button id="checkout-btn" class="btn btn-primary w-100" disabled>
+                    前往結帳
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function loadCart() {
+    fetch('/api/get_cart')
+        .then(response => response.json())
+        .then(data => {
+            const cartItems = document.getElementById('cart-items');
+            const emptyCart = document.getElementById('empty-cart');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            
+            if (data.cart.length === 0) {
+                cartItems.innerHTML = '';
+                emptyCart.classList.remove('d-none');
+                checkoutBtn.disabled = true;
+            } else {
+                emptyCart.classList.add('d-none');
+                checkoutBtn.disabled = false;
+                
+                cartItems.innerHTML = data.cart.map(item => `
+                    <div class="card mb-3">
+                        <div class="row g-0">
+                            <div class="col-md-3">
+                                <img src="${item.image_url}" class="img-fluid rounded-start h-100" style="object-fit: cover;" alt="${item.name}">
+                            </div>
+                            <div class="col-md-9">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">${item.name}</h5>
+                                            <p class="card-text text-primary">NT$ ${item.price}</p>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger remove-btn" data-id="${item.id}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn btn-sm btn-outline-secondary quantity-btn" data-id="${item.id}" data-action="decrease">-</button>
+                                        <span class="mx-3 quantity-display">${item.quantity}</span>
+                                        <button class="btn btn-sm btn-outline-secondary quantity-btn" data-id="${item.id}" data-action="increase">+</button>
+                                        <div class="ms-auto">
+                                            <strong>NT$ ${(item.price * item.quantity).toFixed(0)}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // 綁定事件
+                bindCartEvents();
+            }
+            
+            document.getElementById('cart-total').textContent = `NT$ ${data.total}`;
+            document.getElementById('final-total').textContent = `NT$ ${data.total}`;
+            updateCartCount();
+        });
+}
+
+function bindCartEvents() {
+    // 移除商品
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = parseInt(this.dataset.id);
+            fetch('/api/remove_from_cart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) loadCart();
+            });
+        });
+    });
+    
+    // 數量調整
+    document.querySelectorAll('.quantity-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = parseInt(this.dataset.id);
+            const action = this.dataset.action;
+            const quantityDisplay = this.parentElement.querySelector('.quantity-display');
+            let newQuantity = parseInt(quantityDisplay.textContent);
+            
+            if (action === 'increase') {
+                newQuantity++;
+            } else if (action === 'decrease' && newQuantity > 1) {
+                newQuantity--;
+            } else if (action === 'decrease' && newQuantity === 1) {
+                return; // 不允許小於1
+            }
+            
+            fetch('/api/update_cart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId, quantity: newQuantity })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) loadCart();
+            });
+        });
+    });
+}
+
+// 結帳按鈕
+document.getElementById('checkout-btn').addEventListener('click', function() {
+    window.location.href = '/checkout';
+});
+
+// 頁面載入時加載購物車
+document.addEventListener('DOMContentLoaded', loadCart);
+</script>
+{% endblock %}

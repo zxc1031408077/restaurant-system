@@ -1,0 +1,754 @@
+<!-- cashier_orders.html -->
+{% extends "cashier_base.html" %}
+
+{% block title %}訂單管理 - 收銀員系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>訂單管理</h1>
+        <p class="text-muted">管理所有訂單狀態</p>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary active" data-filter="all">全部</button>
+            <button type="button" class="btn btn-outline-warning" data-filter="待處理">待處理</button>
+            <button type="button" class="btn btn-outline-info" data-filter="製作中">製作中</button>
+            <button type="button" class="btn btn-outline-success" data-filter="完成">完成</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>訂單編號</th>
+                        <th>顧客姓名</th>
+                        <th>聯絡電話</th>
+                        <th>總金額</th>
+                        <th>下單時間</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-table">
+                    {% for order in orders %}
+                    <tr data-status="{{ order.status }}">
+                        <td>#{{ order.id }}</td>
+                        <td>{{ order.customer_name }}</td>
+                        <td>{{ order.customer_phone or '-' }}</td>
+                        <td>NT$ {{ order.total_price|int }}</td>
+                        <td>{{ order.created_at|localtime }}</td>
+                        <td>
+                            {% if order.status == '待處理' %}
+                                <span class="badge bg-warning">{{ order.status }}</span>
+                            {% elif order.status == '製作中' %}
+                                <span class="badge bg-info">{{ order.status }}</span>
+                            {% elif order.status == '完成' %}
+                                <span class="badge bg-success">{{ order.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary detail-btn" 
+                                    data-id="{{ order.id }}"
+                                    data-name="{{ order.customer_name }}"
+                                    data-phone="{{ order.customer_phone or '' }}"
+                                    data-items="{{ order.order_items|e }}"
+                                    data-total="{{ order.total_price }}">
+                                詳情
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-order-btn" 
+                                    data-id="{{ order.id }}">
+                                刪除
+                            </button>
+                            {% if order.status != '完成' %}
+                            <div class="btn-group btn-group-sm">
+                                {% if order.status == '待處理' %}
+                                <button class="btn btn-outline-info status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="製作中">
+                                    製作中
+                                </button>
+                                <button class="btn btn-outline-success status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="完成">
+                                    完成
+                                </button>
+                                {% elif order.status == '製作中' %}
+                                <button class="btn btn-outline-success status-btn" 
+                                        data-id="{{ order.id }}" 
+                                        data-status="完成">
+                                    完成
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 訂單詳情模態框 -->
+<div class="modal fade" id="orderDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">訂單詳情 - 編號 #<span id="detail-order-id"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderDetailContent">
+                <!-- 基本資訊 -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>顧客姓名：</strong><span id="detail-customer-name"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>聯絡電話：</strong><span id="detail-customer-phone"></span></p>
+                    </div>
+                </div>
+
+                <!-- 訂單項目 -->
+                <h6>訂單項目</h6>
+                <div id="order-items-view-mode">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>品項</th>
+                                <th>單價</th>
+                                <th>數量</th>
+                                <th>小計</th>
+                            </tr>
+                        </thead>
+                        <tbody id="order-items-table">
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-primary">
+                                <th colspan="3">總計</th>
+                                <th id="order-total-view">NT$ 0</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div id="order-items-edit-mode" style="display: none;">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>品項</th>
+                                <th>單價</th>
+                                <th>數量</th>
+                                <th>小計</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="order-items-edit-table">
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-primary">
+                                <th colspan="3">總計</th>
+                                <th id="order-total-edit">NT$ 0</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <button class="btn btn-sm btn-outline-primary" id="add-new-item">新增項目</button>
+                </div>
+
+                <!-- 編輯按鈕 -->
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-outline-secondary" id="toggle-edit-mode">編輯訂單項目</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                <button type="button" class="btn btn-primary" id="save-order-items" style="display: none;">儲存變更</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 編輯訂單模態框 -->
+<div class="modal fade" id="editOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">編輯訂單資訊</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editOrderForm">
+                    <input type="hidden" id="editOrderId">
+                    <div class="mb-3">
+                        <label for="editCustomerName" class="form-label">顧客姓名</label>
+                        <input type="text" class="form-control" id="editCustomerName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCustomerPhone" class="form-label">聯絡電話</label>
+                        <input type="text" class="form-control" id="editCustomerPhone">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveOrderChanges">儲存變更</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增商品到訂單模態框 -->
+<div class="modal fade" id="addProductToOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增商品到訂單</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="productSearch" class="form-label">搜尋商品</label>
+                    <input type="text" class="form-control" id="productSearch" placeholder="輸入商品名稱">
+                </div>
+                <div class="mb-3">
+                    <label for="productSelect" class="form-label">選擇商品</label>
+                    <select class="form-control" id="productSelect">
+                        <option value="">-- 請選擇商品 --</option>
+                        {% for product in products %}
+                        <option value="{{ product.id }}" data-price="{{ product.price }}">{{ product.name }} - NT$ {{ product.price }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="productQuantity" class="form-label">數量</label>
+                    <input type="number" class="form-control" id="productQuantity" value="1" min="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="addProductToOrder">新增</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新訂單通知模態框 -->
+<div class="modal fade" id="newOrderModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-bell me-2"></i>新訂單通知</h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    有新的訂單需要處理，將在 <span id="countdown">10</span> 秒後自動關閉
+                </div>
+                
+                <div id="new-order-content">
+                    <!-- 新訂單內容將通過JavaScript動態填充 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">立即處理</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 播放鈴聲 -->
+<audio id="notification-sound" src="/static/notification.mp3" preload="auto"></audio>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 狀態篩選
+document.querySelectorAll('[data-filter]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // 更新按鈕狀態
+        document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const filter = this.dataset.filter;
+        const rows = document.querySelectorAll('#orders-table tr');
+        
+        rows.forEach(row => {
+            if (filter === 'all' || row.dataset.status === filter) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+
+// 查看詳情
+document.querySelectorAll('.detail-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const orderId = this.dataset.id;
+        const customerName = this.dataset.name;
+        const customerPhone = this.dataset.phone;
+        const orderItems = JSON.parse(this.dataset.items);
+        const total = this.dataset.total;
+        
+        // 設置基本資訊
+        document.getElementById('detail-order-id').textContent = orderId;
+        document.getElementById('detail-customer-name').textContent = customerName;
+        document.getElementById('detail-customer-phone').textContent = customerPhone || '-';
+        
+        // 顯示訂單項目（視圖模式）
+        renderOrderItemsView(orderItems);
+        // 計算並顯示總價
+        document.getElementById('order-total-view').textContent = `NT$ ${total}`;
+        
+        // 重置編輯模式
+        resetEditMode(orderItems);
+        
+        // 添加編輯訂單資訊按鈕
+        const basicInfo = document.querySelector('#orderDetailContent .row.mb-3');
+        if (!basicInfo.querySelector('.edit-info-btn')) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-sm btn-outline-secondary edit-info-btn';
+            editBtn.innerHTML = '<i class="fas fa-edit me-1"></i>編輯訂單資訊';
+            editBtn.addEventListener('click', function() {
+                document.getElementById('editOrderId').value = orderId;
+                document.getElementById('editCustomerName').value = customerName;
+                document.getElementById('editCustomerPhone').value = customerPhone || '';
+                
+                // 關閉詳情模態框，打開編輯模態框
+                bootstrap.Modal.getInstance(document.getElementById('orderDetailModal')).hide();
+                new bootstrap.Modal(document.getElementById('editOrderModal')).show();
+            });
+            
+            basicInfo.querySelector('.col-md-6:last-child').appendChild(editBtn);
+        }
+        
+        // 顯示模態框
+        new bootstrap.Modal(document.getElementById('orderDetailModal')).show();
+    });
+});
+
+// 渲染訂單項目（視圖模式）
+function renderOrderItemsView(items) {
+    const tbody = document.getElementById('order-items-table');
+    tbody.innerHTML = items.map(item => `
+        <tr>
+            <td>${item.name}</td>
+            <td>NT$ ${item.price}</td>
+            <td>${item.quantity}</td>
+            <td>NT$ ${item.price * item.quantity}</td>
+        </tr>
+    `).join('');
+}
+
+// 計算總價
+function calculateTotal(items) {
+    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
+
+// 重置編輯模式
+function resetEditMode(items) {
+    const editTbody = document.getElementById('order-items-edit-table');
+    editTbody.innerHTML = items.map(item => `
+        <tr data-id="${item.id}">
+            <td>${item.name}</td>
+            <td>NT$ ${item.price}</td>
+            <td><input type="number" class="form-control form-control-sm quantity-input" value="${item.quantity}" min="1"></td>
+            <td class="item-total">NT$ ${item.price * item.quantity}</td>
+            <td><button class="btn btn-sm btn-outline-danger remove-item-btn">刪除</button></td>
+        </tr>
+    `).join('');
+
+    // 綁定刪除按鈕事件
+    editTbody.querySelectorAll('.remove-item-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.closest('tr').remove();
+            updateEditTotal();
+        });
+    });
+
+    // 綁定數量輸入事件
+    editTbody.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('change', updateEditTotal);
+    });
+
+    updateEditTotal();
+}
+
+// 更新編輯模式的總價
+function updateEditTotal() {
+    let total = 0;
+    document.getElementById('order-items-edit-table').querySelectorAll('tr').forEach(row => {
+        const price = parseFloat(row.cells[1].textContent.replace('NT$ ', ''));
+        const quantity = parseInt(row.querySelector('.quantity-input').value);
+        const itemTotal = price * quantity;
+        row.querySelector('.item-total').textContent = `NT$ ${itemTotal}`;
+        total += itemTotal;
+    });
+    document.getElementById('order-total-edit').textContent = `NT$ ${total}`;
+}
+
+// 切換編輯模式
+document.getElementById('toggle-edit-mode').addEventListener('click', function() {
+    const viewMode = document.getElementById('order-items-view-mode');
+    const editMode = document.getElementById('order-items-edit-mode');
+    const saveButton = document.getElementById('save-order-items');
+
+    if (editMode.style.display === 'none') {
+        viewMode.style.display = 'none';
+        editMode.style.display = 'block';
+        saveButton.style.display = 'block';
+        this.textContent = '取消編輯';
+    } else {
+        viewMode.style.display = 'block';
+        editMode.style.display = 'none';
+        saveButton.style.display = 'none';
+        this.textContent = '編輯訂單項目';
+    }
+});
+
+// 保存訂單項目
+document.getElementById('save-order-items').addEventListener('click', function() {
+    const orderId = document.getElementById('detail-order-id').textContent;
+    const editedItems = [];
+
+    document.getElementById('order-items-edit-table').querySelectorAll('tr').forEach(row => {
+        editedItems.push({
+            id: parseInt(row.dataset.id),
+            name: row.cells[0].textContent,
+            price: parseFloat(row.cells[1].textContent.replace('NT$ ', '')),
+            quantity: parseInt(row.querySelector('.quantity-input').value),
+            image_url: '' // 這個欄位在編輯時不需要，但保持結構一致
+        });
+    });
+
+    fetch(`/api/admin/update_order_items/${orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_items: editedItems })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('訂單項目更新成功！');
+            location.reload();
+        } else {
+            alert('更新失敗：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('發生錯誤，請稍後再試');
+    });
+});
+
+// 新增項目按鈕
+document.getElementById('add-new-item').addEventListener('click', function() {
+    new bootstrap.Modal(document.getElementById('addProductToOrderModal')).show();
+});
+
+// 商品搜尋
+document.getElementById('productSearch').addEventListener('input', function() {
+    const searchText = this.value.toLowerCase();
+    const options = document.getElementById('productSelect').options;
+    
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        if (option.textContent.toLowerCase().includes(searchText)) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
+    }
+});
+
+// 新增商品到訂單
+document.getElementById('addProductToOrder').addEventListener('click', function() {
+    const productSelect = document.getElementById('productSelect');
+    const selectedOption = productSelect.options[productSelect.selectedIndex];
+    const quantity = parseInt(document.getElementById('productQuantity').value);
+    
+    if (!selectedOption.value) {
+        alert('請選擇商品');
+        return;
+    }
+    
+    if (isNaN(quantity) || quantity < 1) {
+        alert('請輸入有效的數量');
+        return;
+    }
+    
+    const productId = parseInt(selectedOption.value);
+    const productName = selectedOption.textContent.split(' - ')[0];
+    const productPrice = parseFloat(selectedOption.dataset.price);
+    
+    // 檢查是否已存在相同商品
+    let existingItem = null;
+    document.getElementById('order-items-edit-table').querySelectorAll('tr').forEach(row => {
+        if (parseInt(row.dataset.id) === productId) {
+            existingItem = row;
+        }
+    });
+    
+    if (existingItem) {
+        // 如果已存在，增加數量
+        const quantityInput = existingItem.querySelector('.quantity-input');
+        quantityInput.value = parseInt(quantityInput.value) + quantity;
+        quantityInput.dispatchEvent(new Event('change'));
+    } else {
+        // 如果不存在，新增項目
+        const editTbody = document.getElementById('order-items-edit-table');
+        const newRow = document.createElement('tr');
+        newRow.dataset.id = productId;
+        newRow.innerHTML = `
+            <td>${productName}</td>
+            <td>NT$ ${productPrice}</td>
+            <td><input type="number" class="form-control form-control-sm quantity-input" value="${quantity}" min="1"></td>
+            <td class="item-total">NT$ ${productPrice * quantity}</td>
+            <td><button class="btn btn-sm btn-outline-danger remove-item-btn">刪除</button></td>
+        `;
+        editTbody.appendChild(newRow);
+        
+        // 綁定事件
+        newRow.querySelector('.remove-item-btn').addEventListener('click', function() {
+            this.closest('tr').remove();
+            updateEditTotal();
+        });
+        
+        newRow.querySelector('.quantity-input').addEventListener('change', updateEditTotal);
+        
+        updateEditTotal();
+    }
+    
+    // 關閉模態框
+    bootstrap.Modal.getInstance(document.getElementById('addProductToOrderModal')).hide();
+});
+
+// 儲存訂單變更
+document.getElementById('saveOrderChanges').addEventListener('click', function() {
+    const orderId = document.getElementById('editOrderId').value;
+    const customerName = document.getElementById('editCustomerName').value;
+    const customerPhone = document.getElementById('editCustomerPhone').value;
+    
+    if (!customerName.trim()) {
+        alert('請輸入顧客姓名');
+        return;
+    }
+    
+    fetch(`/api/admin/update_order_info/${orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            customer_name: customerName,
+            customer_phone: customerPhone
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('訂單資訊更新成功！');
+            location.reload();
+        } else {
+            alert('更新失敗：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('發生錯誤，請稍後再試');
+    });
+});
+
+// 更新狀態
+document.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const orderId = this.dataset.id;
+        const newStatus = this.dataset.status;
+        
+        if (confirm(`確定要將訂單狀態改為「${newStatus}」嗎？`)) {
+            fetch(`/api/admin/update_order_status/${orderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('狀態更新成功！');
+                    location.reload();
+                } else {
+                    alert('更新失敗：' + data.message);
+                }
+            });
+        }
+    });
+});
+
+// 刪除訂單
+document.querySelectorAll('.delete-order-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const orderId = this.dataset.id;
+        
+        if (confirm('確定要刪除此訂單嗎？此操作無法復原。')) {
+            fetch(`/api/admin/delete_order/${orderId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('訂單刪除成功！');
+                    location.reload();
+                } else {
+                    alert('刪除失敗：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('發生錯誤，請稍後再試');
+            });
+        }
+    });
+});
+
+// 全域變數
+let newOrderModal = null;
+let countdownInterval = null;
+
+// 倒數計時
+function startCountdown(seconds) {
+    let countdown = seconds;
+    const countdownElement = document.getElementById('countdown');
+    countdownElement.textContent = countdown;
+
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+
+    countdownInterval = setInterval(() => {
+        countdown--;
+        countdownElement.textContent = countdown;
+
+        if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            newOrderModal.hide();
+
+            // ✅ 倒數結束後再刷新頁面
+            location.reload();
+        }
+    }, 1000);
+}
+
+// 顯示新訂單通知
+function showNewOrderNotification(orderData) {
+    // 播放鈴聲
+    const sound = document.getElementById('notification-sound');
+    sound.currentTime = 0;
+    sound.play().catch(e => console.log('無法播放音效:', e));
+
+    // 顯示瀏覽器通知
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('新訂單通知', {
+            body: `訂單編號: #${orderData.id}, 顧客: ${orderData.customer_name}, 金額: NT$ ${orderData.total_price}`,
+            icon: '/static/favicon.ico'
+        });
+    }
+
+    // 填充訂單內容
+    const contentDiv = document.getElementById('new-order-content');
+    contentDiv.innerHTML = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>訂單編號：</strong>#${orderData.id}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>下單時間：</strong>${new Date().toLocaleString('zh-TW')}</p>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>顧客姓名：</strong>${orderData.customer_name}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>聯絡電話：</strong>${orderData.customer_phone || '-'}</p>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>用餐方式：</strong>${orderData.dine_in ? '內用' : '外帶'}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>總金額：</strong>NT$ ${orderData.total_price}</p>
+            </div>
+        </div>
+        
+        <h6>訂單項目</h6>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>品項</th>
+                    <th>單價</th>
+                    <th>數量</th>
+                    <th>小計</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${orderData.order_items.map(item => `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>NT$ ${item.price}</td>
+                        <td>${item.quantity}</td>
+                        <td>NT$ ${item.price * item.quantity}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+            <tfoot>
+                <tr class="table-primary">
+                    <th colspan="3">總計</th>
+                    <th>NT$ ${orderData.total_price}</th>
+                </tr>
+            </tfoot>
+        </table>
+    `;
+
+    // 顯示 modal
+    if (!newOrderModal) {
+        newOrderModal = new bootstrap.Modal(document.getElementById('newOrderModal'));
+    }
+    newOrderModal.show();
+
+    // 啟動倒數
+    startCountdown(10);
+}
+
+// WebSocket 或輪詢檢查新訂單
+function checkNewOrders() {
+    fetch('/api/check_new_orders')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.has_new_order) {
+                showNewOrderNotification(data.order);
+            }
+        })
+        .catch(error => console.error('檢查新訂單時發生錯誤:', error));
+}
+
+// 請求瀏覽器通知權限
+if ('Notification' in window) {
+    Notification.requestPermission();
+}
+
+// 每10秒檢查一次新訂單
+setInterval(checkNewOrders, 10000);
+
+// 頁面載入時檢查一次
+checkNewOrders();
+</script>
+{% endblock %}

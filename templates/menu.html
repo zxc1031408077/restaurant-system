@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}菜單 - 餐飲點餐系統{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="text-center mb-4">美食菜單</h1>
+        <p class="text-center text-muted">選擇您喜歡的美食，點擊加入購物車</p>
+    </div>
+</div>
+
+<div class="row" id="menu-items">
+    {% for product in products %}
+    <div class="col-md-4 col-lg-3 mb-4">
+        <div class="card h-100 shadow-sm">
+            <img src="{{ product.image_url }}" class="card-img-top product-image" alt="{{ product.name }}" data-id="{{ product.id }}">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="card-text text-muted small">{{ product.category }}</p>
+                <p class="card-text"><strong class="text-primary fs-5">NT$ {{ product.price }}</strong></p>
+                <div class="mt-auto">
+                    <button class="btn btn-primary w-100 add-to-cart-btn" 
+                            data-id="{{ product.id }}" 
+                            data-name="{{ product.name }}" 
+                            data-price="{{ product.price }}"
+                            data-image="{{ product.image_url }}">
+                        <i class="fas fa-plus me-1"></i>加入購物車
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 加入購物車動畫
+function addToCartWithAnimation(productId, productName, productPrice, productImage) {
+    // 獲取商品圖片位置
+    const productElement = document.querySelector(`.product-image[data-id="${productId}"]`);
+    const productRect = productElement.getBoundingClientRect();
+    
+    // 創建動畫元素
+    const flyingItem = document.createElement('div');
+    flyingItem.className = 'cart-item-animation';
+    flyingItem.style.backgroundImage = `url(${productImage})`;
+    flyingItem.style.left = `${productRect.left}px`;
+    flyingItem.style.top = `${productRect.top}px`;
+    document.body.appendChild(flyingItem);
+    
+    // 獲取購物車位置
+    const cartRect = document.getElementById('floating-cart').getBoundingClientRect();
+    const cartCenterX = cartRect.left + cartRect.width / 2;
+    const cartCenterY = cartRect.top + cartRect.height / 2;
+    
+    // 執行動畫
+    setTimeout(() => {
+        flyingItem.style.left = `${cartCenterX - 20}px`;
+        flyingItem.style.top = `${cartCenterY - 20}px`;
+        flyingItem.style.width = '10px';
+        flyingItem.style.height = '10px';
+        flyingItem.style.opacity = '0.5';
+    }, 50);
+    
+    // 動畫完成後移除元素並更新購物車
+    setTimeout(() => {
+        document.body.removeChild(flyingItem);
+        
+        // 實際加入購物車
+        fetch('/api/add_to_cart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                product_id: parseInt(productId),
+                quantity: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCartCount();
+            } else {
+                alert('加入購物車失敗：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('發生錯誤，請稍後再試');
+        });
+    }, 800);
+}
+
+document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const productId = this.dataset.id;
+        const productName = this.dataset.name;
+        const productPrice = this.dataset.price;
+        const productImage = this.dataset.image;
+        
+        addToCartWithAnimation(productId, productName, productPrice, productImage);
+    });
+});
+</script>
+{% endblock %}

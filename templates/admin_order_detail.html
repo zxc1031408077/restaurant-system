@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">訂單詳細資訊 #{{ order.id }}</h2>
+        <div>
+            <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-2"></i> 返回列表
+            </a>
+            <a href="{{ url_for('delete_order', id=order.id) }}" 
+               class="btn btn-danger"
+               onclick="return confirm('確定要刪除這筆訂單嗎？此操作無法復原。')">
+                <i class="bi bi-trash me-2"></i> 刪除訂單
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow mb-4">
+                <div class="card-header bg-gradient-primary text-white py-3">
+                    <h4 class="mb-0">訂單資訊</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">顧客姓名</label>
+                        <p class="form-control-static fw-bold">{{ order.customer_name }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">電話</label>
+                        <p class="form-control-static">{{ order.phone or '未提供' }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">地址</label>
+                        <p class="form-control-static">{{ order.address or '未提供' }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">付款方式</label>
+                        <p class="form-control-static">{{ order.payment_method }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">訂單狀態</label>
+                        <form method="POST" action="{{ url_for('update_order_status', id=order.id) }}">
+                            <select name="status" class="form-select" onchange="this.form.submit()">
+                                <option value="待處理" {% if order.status=='待處理' %}selected{% endif %}>待處理</option>
+                                <option value="製作中" {% if order.status=='製作中' %}selected{% endif %}>製作中</option>
+                                <option value="完成" {% if order.status=='完成' %}selected{% endif %}>完成</option>
+                            </select>
+                        </form>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">訂單時間</label>
+                        <p class="form-control-static">{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">訂單總金額</label>
+                        <p class="form-control-static fw-bold text-primary fs-4">${{ order.total_price }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow">
+                <div class="card-header bg-gradient-primary text-white py-3">
+                    <h4 class="mb-0">訂購商品</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>商品名稱</th>
+                                    <th>單價</th>
+                                    <th>數量</th>
+                                    <th>小計</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order_items %}
+                                <tr>
+                                    <td>{{ item.name }}</td>
+                                    <td>${{ item.price }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ item.price * item.quantity }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary">
+                                    <th colspan="3" class="text-end fw-bold">總計:</th>
+                                    <th class="fw-bold">${{ order.total_price }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

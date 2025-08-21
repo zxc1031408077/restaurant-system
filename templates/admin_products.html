@@ -1,0 +1,260 @@
+{% extends "admin_base.html" %}
+
+{% block title %}商品管理 - 商家管理後台{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>商品管理</h1>
+        <p class="text-muted">管理您的餐點商品</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+            <i class="fas fa-plus me-1"></i>新增商品
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>圖片</th>
+                        <th>商品名稱</th>
+                        <th>分類</th>
+                        <th>價格</th>
+                        <th>庫存</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>
+                            <img src="{{ product.image_url }}" alt="{{ product.name }}" 
+                                 style="width: 50px; height: 50px; object-fit: cover;" class="rounded">
+                        </td>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.category }}</td>
+                        <td>NT$ {{ product.price }}</td>
+                        <td>{{ product.stock }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary edit-btn" 
+                                    data-id="{{ product.id }}"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category }}"
+                                    data-stock="{{ product.stock }}"
+                                    data-image="{{ product.image_url }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" 
+                                    data-id="{{ product.id }}"
+                                    data-name="{{ product.name }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 新增商品模態框 -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增商品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addProductForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="productName" class="form-label">商品名稱</label>
+                        <input type="text" class="form-control" id="productName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productPrice" class="form-label">價格</label>
+                        <input type="number" class="form-control" id="productPrice" min="0" step="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productCategory" class="form-label">分類</label>
+                        <select class="form-control" id="productCategory">
+                            <option value="主餐">主餐</option>
+                            <option value="漢堡">漢堡</option>
+                            <option value="配餐">配餐</option>
+                            <option value="飲品">飲品</option>
+                            <option value="輕食">輕食</option>
+                            <option value="甜點">甜點</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productStock" class="form-label">庫存</label>
+                        <input type="number" class="form-control" id="productStock" min="0" value="99">
+                    </div>
+                    <div class="mb-3">
+                        <label for="productImage" class="form-label">圖片網址</label>
+                        <input type="url" class="form-control" id="productImage" 
+                               placeholder="https://example.com/image.jpg">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">新增</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 編輯商品模態框 -->
+<div class="modal fade" id="editProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">編輯商品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editProductForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editProductId">
+                    <div class="mb-3">
+                        <label for="editProductName" class="form-label">商品名稱</label>
+                        <input type="text" class="form-control" id="editProductName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editProductPrice" class="form-label">價格</label>
+                        <input type="number" class="form-control" id="editProductPrice" min="0" step="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editProductCategory" class="form-label">分類</label>
+                        <select class="form-control" id="editProductCategory">
+                            <option value="主餐">主餐</option>
+                            <option value="漢堡">漢堡</option>
+                            <option value="配餐">配餐</option>
+                            <option value="飲品">飲品</option>
+                            <option value="輕食">輕食</option>
+                            <option value="甜點">甜點</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editProductStock" class="form-label">庫存</label>
+                        <input type="number" class="form-control" id="editProductStock" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editProductImage" class="form-label">圖片網址</label>
+                        <input type="url" class="form-control" id="editProductImage">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">更新</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 新增商品
+document.getElementById('addProductForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        name: document.getElementById('productName').value,
+        price: document.getElementById('productPrice').value,
+        category: document.getElementById('productCategory').value,
+        stock: document.getElementById('productStock').value,
+        image_url: document.getElementById('productImage').value || 'https://via.placeholder.com/200x150?text=食物圖片'
+    };
+    
+    fetch('/api/admin/add_product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('商品新增成功！');
+            location.reload();
+        } else {
+            alert('新增失敗：' + data.message);
+        }
+    });
+});
+
+// 編輯按鈕事件
+document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('editProductId').value = this.dataset.id;
+        document.getElementById('editProductName').value = this.dataset.name;
+        document.getElementById('editProductPrice').value = this.dataset.price;
+        document.getElementById('editProductCategory').value = this.dataset.category;
+        document.getElementById('editProductStock').value = this.dataset.stock;
+        document.getElementById('editProductImage').value = this.dataset.image;
+        
+        new bootstrap.Modal(document.getElementById('editProductModal')).show();
+    });
+});
+
+// 更新商品
+document.getElementById('editProductForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const productId = document.getElementById('editProductId').value;
+    const formData = {
+        name: document.getElementById('editProductName').value,
+        price: document.getElementById('editProductPrice').value,
+        category: document.getElementById('editProductCategory').value,
+        stock: document.getElementById('editProductStock').value,
+        image_url: document.getElementById('editProductImage').value
+    };
+    
+    fetch(`/api/admin/update_product/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('商品更新成功！');
+            location.reload();
+        } else {
+            alert('更新失敗：' + data.message);
+        }
+    });
+});
+
+// 刪除商品
+document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const productId = this.dataset.id;
+        const productName = this.dataset.name;
+        
+        if (confirm(`確定要刪除商品「${productName}」嗎？`)) {
+            fetch(`/api/admin/delete_product/${productId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('商品刪除成功！');
+                    location.reload();
+                } else {
+                    alert('刪除失敗：' + data.message);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

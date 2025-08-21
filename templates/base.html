@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}餐飲點餐系統{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand { font-weight: bold; }
+        .card-img-top { height: 200px; object-fit: cover; }
+        .btn-primary { background-color: #ff6b35; border-color: #ff6b35; }
+        .btn-primary:hover { background-color: #e55a2b; border-color: #e55a2b; }
+        .cart-badge { background-color: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.8em; }
+        footer { background-color: #343a40; color: white; padding: 20px 0; margin-top: 50px; }
+        
+        /* 浮動購物車樣式 */
+        .floating-cart {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: #fff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .floating-cart:hover {
+            transform: scale(1.1);
+        }
+        
+        .floating-cart .cart-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .cart-panel {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            max-height: 400px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 999;
+            display: none;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        .cart-panel.show {
+            display: block;
+        }
+        
+        .cart-item-animation {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-size: cover;
+            z-index: 1001;
+            transition: all 0.8s cubic-bezier(0.42, 0, 0.58, 1);
+        }
+        
+        /* 購物車項目數量控制樣式 */
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+        
+        .quantity-btn {
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        
+        .quantity-display {
+            margin: 0 8px;
+            min-width: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('menu') }}">
+                <i class="fas fa-utensils me-2"></i>美食點餐
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('menu') }}">
+                    <i class="fas fa-home me-1"></i>菜單
+                </a>
+                
+            </div>
+        </div>
+    </nav>
+
+    <main class="container my-4">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 浮動購物車 -->
+    <div class="floating-cart" id="floating-cart">
+        <i class="fas fa-shopping-cart fa-2x"></i>
+        <span class="cart-count" id="floating-cart-count">0</span>
+    </div>
+    
+    <!-- 購物車面板 -->
+    <div class="cart-panel" id="cart-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">購物車</h5>
+            <a href="{{ url_for('cart') }}" class="btn btn-sm btn-outline-primary">詳細編輯</a>
+        </div>
+        <div id="cart-panel-items"></div>
+        <div class="d-flex justify-content-between mt-3">
+            <strong>總計: <span id="cart-panel-total">NT$ 0</span></strong>
+            <a href="{{ url_for('checkout') }}" class="btn btn-primary btn-sm">結帳</a>
+        </div>
+    </div>
+
+    <footer class="text-center">
+        <div class="container">
+            <p>&copy; 2024 餐飲點餐系統. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 更新購物車計數
+        function updateCartCount() {
+            fetch('/api/get_cart')
+                .then(response => response.json())
+                .then(data => {
+                    const count = data.cart.reduce((sum, item) => sum + item.quantity, 0);
+                    const badge = document.getElementById('floating-cart-count');
+                    badge.textContent = count;
+                    
+                    // 更新購物車面板內容
+                    updateCartPanel(data.cart, data.total);
+                });
+        }
+        
+        // 更新購物車面板
+        function updateCartPanel(cart, total) {
+            const panel = document.getElementById('cart-panel-items');
+            const totalElement = document.getElementById('cart-panel-total');
+            
+            if (cart.length === 0) {
+                panel.innerHTML = '<p class="text-center text-muted">購物車是空的</p>';
+            } else {
+                panel.innerHTML = cart.map(item => `
+                    <div class="cart-item mb-3 border-bottom pb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <strong>${item.name}</strong>
+                                <div class="text-muted">NT$ ${item.price} / 個</div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromCart(${item.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <div class="quantity-control">
+                                <button class="btn btn-sm btn-outline-secondary quantity-btn" onclick="updateItemQuantity(${item.id}, ${item.quantity - 1})">-</button>
+                                <span class="quantity-display mx-2">${item.quantity}</span>
+                                <button class="btn btn-sm btn-outline-secondary quantity-btn" onclick="updateItemQuantity(${item.id}, ${item.quantity + 1})">+</button>
+                            </div>
+                            <div class="fw-bold">NT$ ${item.price * item.quantity}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            totalElement.textContent = `NT$ ${total}`;
+        }
+        
+        // 從購物車移除商品
+        function removeFromCart(productId) {
+            fetch('/api/remove_from_cart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) updateCartCount();
+            });
+        }
+        
+        // 更新商品數量
+        function updateItemQuantity(productId, newQuantity) {
+            if (newQuantity <= 0) {
+                removeFromCart(productId);
+                return;
+            }
+            
+            fetch('/api/update_cart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    product_id: productId, 
+                    quantity: newQuantity 
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) updateCartCount();
+            });
+        }
+        
+        // 顯示/隱藏購物車面板
+        document.getElementById('floating-cart').addEventListener('click', function() {
+            document.getElementById('cart-panel').classList.toggle('show');
+        });
+        
+        // 點擊外部關閉購物車面板
+        document.addEventListener('click', function(event) {
+            const cartPanel = document.getElementById('cart-panel');
+            const floatingCart = document.getElementById('floating-cart');
+            
+            if (!cartPanel.contains(event.target) && !floatingCart.contains(event.target)) {
+                cartPanel.classList.remove('show');
+            }
+        });
+        
+        // 頁面載入時更新購物車計數
+        document.addEventListener('DOMContentLoaded', updateCartCount);
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

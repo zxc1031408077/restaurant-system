@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}付款 - 餐飲點餐系統{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4><i class="fas fa-credit-card me-2"></i>模擬付款</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>訂單編號：</strong> #{{ order.id }}
+                </div>
+                <div class="mb-3">
+                    <strong>顧客姓名：</strong> {{ order.customer_name }}
+                </div>
+                <div class="mb-3">
+                    <strong>付款金額：</strong> 
+                    <span class="text-primary fs-4">NT$ {{ order.total_price|int }}</span>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    這是模擬付款系統，點擊付款按鈕即完成付款
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button id="pay-btn" class="btn btn-success btn-lg">
+                        <i class="fas fa-check-circle me-2"></i>確認付款
+                    </button>
+                    <a href="{{ url_for('menu') }}" class="btn btn-outline-secondary">返回菜單</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('pay-btn').addEventListener('click', function() {
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>處理中...';
+    this.disabled = true;
+    
+    // 在支付頁面確認支付後才創建訂單
+    fetch('/api/submit_order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/order_success/' + data.order_id;
+        } else {
+            alert('付款失敗：' + data.message);
+            this.innerHTML = '<i class="fas fa-check-circle me-2"></i>確認付款';
+            this.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('發生錯誤，請稍後再試');
+        this.innerHTML = '<i class="fas fa-check-circle me-2"></i>確認付款';
+        this.disabled = false;
+    });
+});
+</script>
+{% endblock %}

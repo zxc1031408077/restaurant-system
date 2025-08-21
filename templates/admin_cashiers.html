@@ -1,0 +1,231 @@
+<!-- admin_cashiers.html -->
+{% extends "admin_base.html" %}
+
+{% block title %}收銀員管理 - 商家管理後台{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>收銀員管理</h1>
+        <p class="text-muted">管理您的收銀員帳號</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCashierModal">
+            <i class="fas fa-plus me-1"></i>新增收銀員
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>帳號</th>
+                        <th>狀態</th>
+                        <th>創建時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cashier in cashiers %}
+                    <tr>
+                        <td>{{ cashier.id }}</td>
+                        <td>{{ cashier.username }}</td>
+                        <td>
+                            {% if cashier.is_active %}
+                                <span class="badge bg-success">啟用</span>
+                            {% else %}
+                                <span class="badge bg-danger">停用</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ cashier.created_at|localtime }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary edit-cashier-btn" 
+                                    data-id="{{ cashier.id }}"
+                                    data-username="{{ cashier.username }}"
+                                    data-active="{{ cashier.is_active }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-cashier-btn" 
+                                    data-id="{{ cashier.id }}"
+                                    data-username="{{ cashier.username }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 新增收銀員模態框 -->
+<div class="modal fade" id="addCashierModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增收銀員</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addCashierForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="cashierUsername" class="form-label">帳號</label>
+                        <input type="text" class="form-control" id="cashierUsername" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cashierPassword" class="form-label">密碼</label>
+                        <input type="password" class="form-control" id="cashierPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cashierConfirmPassword" class="form-label">確認密碼</label>
+                        <input type="password" class="form-control" id="cashierConfirmPassword" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">新增</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 編輯收銀員模態框 -->
+<div class="modal fade" id="editCashierModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">編輯收銀員</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editCashierForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editCashierId">
+                    <div class="mb-3">
+                        <label for="editCashierUsername" class="form-label">帳號</label>
+                        <input type="text" class="form-control" id="editCashierUsername" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCashierPassword" class="form-label">新密碼 (留空不修改)</label>
+                        <input type="password" class="form-control" id="editCashierPassword">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editCashierActive">
+                            <label class="form-check-label" for="editCashierActive">
+                                啟用帳號
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">更新</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 新增收銀員
+document.getElementById('addCashierForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('cashierUsername').value;
+    const password = document.getElementById('cashierPassword').value;
+    const confirmPassword = document.getElementById('cashierConfirmPassword').value;
+    
+    if (password !== confirmPassword) {
+        alert('密碼確認不一致');
+        return;
+    }
+    
+    fetch('/api/admin/add_cashier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('收銀員新增成功！');
+            location.reload();
+        } else {
+            alert('新增失敗：' + data.message);
+        }
+    });
+});
+
+// 編輯按鈕事件
+document.querySelectorAll('.edit-cashier-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('editCashierId').value = this.dataset.id;
+        document.getElementById('editCashierUsername').value = this.dataset.username;
+        document.getElementById('editCashierActive').checked = this.dataset.active === 'True';
+        
+        new bootstrap.Modal(document.getElementById('editCashierModal')).show();
+    });
+});
+
+// 更新收銀員
+document.getElementById('editCashierForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const cashierId = document.getElementById('editCashierId').value;
+    const username = document.getElementById('editCashierUsername').value;
+    const password = document.getElementById('editCashierPassword').value;
+    const isActive = document.getElementById('editCashierActive').checked;
+    
+    const formData = { username, is_active: isActive };
+    if (password) {
+        formData.password = password;
+    }
+    
+    fetch(`/api/admin/update_cashier/${cashierId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('收銀員更新成功！');
+            location.reload();
+        } else {
+            alert('更新失敗：' + data.message);
+        }
+    });
+});
+
+// 刪除收銀員
+document.querySelectorAll('.delete-cashier-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const cashierId = this.dataset.id;
+        const cashierUsername = this.dataset.username;
+        
+        if (confirm(`確定要刪除收銀員「${cashierUsername}」嗎？`)) {
+            fetch(`/api/admin/delete_cashier/${cashierId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('收銀員刪除成功！');
+                    location.reload();
+                } else {
+                    alert('刪除失敗：' + data.message);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
